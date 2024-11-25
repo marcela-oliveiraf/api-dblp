@@ -51,6 +51,7 @@ def processar_xml(arquivo):
                     # Extrair o DOI da URL (se o URL começar com https://doi.org/)
                     publicacao["doi_publicacao"] = extrair_doi_da_url(url_leitura)
 
+                # =================AUTORES=================
                 # Autores (no formato de lista)
                 autores = [
                     author.text.strip()
@@ -71,7 +72,7 @@ def processar_xml(arquivo):
 
 # Lista de arquivos XML para processar
 arquivos_array = [
-    f"D:\\Users\\Mar-o\\Desktop\\computing\\api-dblp-json\\dblp_part_a{letra}.xml"
+    f"D:\\Users\\Mar-o\\Desktop\\computing\\api-dblp\\dblp_part_a{letra}.xml"  # Usando f-string corretamente
     for letra in (chr(x) for x in range(ord("a"), ord("i") + 1))
 ]
 

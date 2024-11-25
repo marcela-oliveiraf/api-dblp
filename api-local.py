@@ -19,7 +19,7 @@ def connect_to_db():
 
 # Função para buscar e processar as conferências do DBLP
 def fetch_and_store_dblp_data(query, cursor):
-    url = f'https://dblp.org/search/venue/api?q={query}&format=xml'
+    url = f'https://dblp.org/search/venue/api?q={query}&h=1000&format=xml'
     response = requests.get(url)
     
     if response.status_code == 200:
@@ -67,7 +67,7 @@ def fetch_and_store_dblp_data(query, cursor):
 # Função para gerenciar requisições com rate-limiting
 def buscar_conferencias_com_rate_limiting(letras, cursor):
     query = ''.join(letras)
-    url = f"https://dblp.org/search/venue/api?q={query}&format=xml"  # Usar formato XML na URL
+    url = f"https://dblp.org/search/venue/api?q={query}&h=1000&format=xml"  # Usar formato XML na URL
     retries = 0
     max_retries = 5
     delay = 1  # Delay inicial em segundos
@@ -91,13 +91,8 @@ def buscar_conferencias_com_rate_limiting(letras, cursor):
                     url_ = hit.find('.//url')
 
                     if venue is not None and acronym is not None and type_ is not None and url_ is not None:
-                        nome_local = venue.text
-                        acronimo = acronym.text
-                        tipo = type_.text
-                        url_text = url_.text
-
-                        # Armazenar as conferências no banco de dados
-                        fetch_and_store_dblp_data(nome_local, cursor)
+                        # Armazenar as publicações no banco de dados
+                        fetch_and_store_dblp_data(query, cursor)
                 break
 
             # Verificar cabeçalhos de rate-limiting
