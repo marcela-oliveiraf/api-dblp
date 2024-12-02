@@ -4,8 +4,6 @@ from extract_xml import *
 
 password = os.getenv("DB_PASSWORD")
 
-# $env:DB_PASSWORD="suasenha"
-
 # Conectar ao banco de dados MySQL
 conn = pymysql.connect(
     host="localhost",
@@ -29,29 +27,31 @@ for publicacao in publicacoes:
         if result:
             # A publicação já existe, obter o id_publicacao
             id_publicacao = result[0]
+
             # Atualizar os campos da publicação
-            cursor.execute("""
+            cursor.execute(""" 
             UPDATE publicacao
-            SET titulo = %s, ano = %s, doi_publicacao = %s, acesso = %s, url_leitura = %s
+            SET titulo = %s, ano = %s, doi_publicacao = %s, acesso_tipo = %s, url_leitura = %s
             WHERE id_publicacao = %s
             """, (
                 publicacao['titulo'],
                 publicacao['ano'],
                 publicacao.get('doi_publicacao'),
-                publicacao['acesso'],
+                publicacao['acesso_tipo'],
                 publicacao['url_leitura'],
                 id_publicacao
             ))
+
         else:
             # Inserir nova publicação
             cursor.execute("""
-            INSERT INTO publicacao (titulo, ano, doi_publicacao, acesso, url_leitura)
+            INSERT INTO publicacao (titulo, ano, doi_publicacao, acesso_tipo, url_leitura)
             VALUES (%s, %s, %s, %s, %s)
             """, (
                 publicacao['titulo'],
                 publicacao['ano'],
                 publicacao.get('doi_publicacao'),
-                publicacao['acesso'],
+                publicacao['acesso_tipo'],
                 publicacao['url_leitura']
             ))
             id_publicacao = cursor.lastrowid  # Obter o ID da publicação recém-inserida
@@ -69,12 +69,14 @@ for publicacao in publicacoes:
                 cursor.execute("INSERT INTO autor (nome_autor) VALUES (%s)", (autor,))
                 id_autor = cursor.lastrowid
             
-            # Associar autor à publicação na tabela intermediária
+            # Associar autor à publicação na tabela de relacionamento 'publicacao_autores'
             cursor.execute("""
-            INSERT IGNORE INTO publicacao_autores (id_publicacao, id_autor)
+            INSERT IGNORE INTO autor_publicacao (id_publicacao, id_autor)
             VALUES (%s, %s)
             """, (id_publicacao, id_autor))
 
+        conn.commit()
+        
     except Exception as e:
         print(f"Erro ao processar publicação '{publicacao['titulo']}': {e}")
 

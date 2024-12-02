@@ -1,10 +1,9 @@
 from lxml import etree
-import re
+import html.entities
 import time
-from bs4 import BeautifulSoup  # Importa BeautifulSoup para corrigir o XML automaticamente
+import re
 
-# Lista para armazenar publicações como dicionários
-publicacoes = []
+publicacoes = []  # Lista para armazenar os dados extraídos
 
 # Função para extrair o DOI após 'https://doi.org/' da URL
 def extrair_doi_da_url(url):
@@ -14,69 +13,67 @@ def extrair_doi_da_url(url):
             return match.group(1).strip()  # Retorna a parte após 'https://doi.org/'
     return None
 
-def corrigir_com_soup(arquivo):
-    with open(arquivo, "r", encoding="utf-8") as f:
+# Função para limpar ou ignorar entidades não definidas no XML
+def limpar_entidades_nao_definidas(arquivo):
+    with open(arquivo, "r", encoding="UTF-8") as f:
         conteudo = f.read()
-    
-    # Corrige automaticamente entidades usando BeautifulSoup
-    soup = BeautifulSoup(conteudo, "xml")
-    return str(soup)
 
+    # Usar regex para remover entidades desconhecidas (qualquer coisa entre `&` e `;` que não seja reconhecida)
+    conteudo = re.sub(r"&[a-zA-Z]+;", "", conteudo)
+    return conteudo
+
+# Função para processar o XML
 def processar_xml(arquivo):
-    # Corrigir o XML com BeautifulSoup antes de passar para o lxml
-    xml_corrigido = corrigir_com_soup(arquivo)
-
-    parser = etree.XMLParser(recover=True, encoding="utf-8", no_network=True, resolve_entities=True)
-
     try:
+        # Corrigir entidades no conteúdo do arquivo
+        xml_corrigido = limpar_entidades_nao_definidas(arquivo)
+
+        # Criar um parser customizado
+        parser = etree.XMLParser(recover=True, encoding="UTF-8", resolve_entities=False)
+
         # Parsing do XML corrigido em modo streaming
-        context = etree.iterparse(
-            bytes(xml_corrigido, "utf-8"), events=("end",), tag="inproceedings"
-        )
-        for event, elem in context:
-            # Criar um dicionário para cada publicação
-            publicacao = {}
+        context = etree.iterparse(bytes(xml_corrigido, "UTF-8"), events=("end",), tag="inproceedings", encoding="UTF-8")
 
-            if elem is not None:
-                titulo = elem.findtext("title", default="").strip()
-                publicacao["titulo"] = titulo  # Título já corrigido pelo BeautifulSoup
+        publicacoes = []  # Lista para armazenar os dados extraídos
 
-                publicacao["ano"] = elem.findtext("year", default=None)
-                publicacao["acesso"] = elem.findtext("access", default=None)
-                publicacao["url_leitura"] = elem.findtext("ee", default=None)
+        for _, elem in context:
+            publicacao = {
+                "titulo": elem.findtext("title", default="").strip(),
+                "ano": elem.findtext("year", default=None),
+                "acesso_tipo": elem.findtext("access", default=None),
+                "url_leitura": elem.findtext("ee", default=None),
+            }
 
-                # URL da tag <ee> (contém o DOI completo)
-                url_leitura = elem.findtext("ee", default=None)
-                if url_leitura:
-                    # Extrair o DOI da URL (se o URL começar com https://doi.org/)
-                    publicacao["doi_publicacao"] = extrair_doi_da_url(url_leitura)
+            # Extrair autores
+            publicacao["autores"] = [
+                author.text.strip() for author in elem.findall("author") if author.text
+            ]
 
-                # =================AUTORES=================
-                # Autores (no formato de lista)
-                autores = [
-                    author.text.strip()
-                    for author in elem.findall("author")
-                    if author.text
-                ]
-                publicacao["autores"] = autores
-
-            if publicacao["titulo"]:  # Verifica se o título foi extraído
+            # Adicionar à lista de publicações
+            if publicacao["titulo"]:
                 publicacoes.append(publicacao)
 
-            elem.clear()  # Liberar memória
+            # Liberar memória
+            elem.clear()
 
         del context  # Fechar o iterador
 
+        return publicacoes
+
     except Exception as e:
         print(f"Erro ao processar o arquivo {arquivo}: {e}")
+        return []
 
 # Lista de arquivos XML para processar
 arquivos_array = [
-    f"D:\\Users\\Mar-o\\Desktop\\computing\\api-dblp\\dblp_part_a{letra}.xml"  # Usando f-string corretamente
-    for letra in (chr(x) for x in range(ord("a"), ord("i") + 1))
+    f"D:\\Users\\Mar-o\\Desktop\\computing\\api-dblp\\dblp_part_a{letra}.xml"
+    for letra in ("h", "i")  # Definir os arquivos que você deseja processar
 ]
 
 # Processar cada arquivo
 for arq in arquivos_array:
-    processar_xml(arq)
-    time.sleep(1)  # Esperar 1 segundo entre arquivos
+    publicacoes = processar_xml(arq)
+    print(f"Publicações processadas no arquivo {arq}: {len(publicacoes)}")
+
+
+
