@@ -28,7 +28,7 @@ def get_description_from_doi(doi, api_key):
         # Busque pela tag <dc:description> dentro do XML
         description = root.findall(".//dc:description", namespaces={'dc': 'http://purl.org/dc/elements/1.1/'})
         
-        if description:
+        if description and description[0].text:
             return description[0].text.strip()
         else:
             # print(f"Resumo não encontrado para o DOI: {doi}")
